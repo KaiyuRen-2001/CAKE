@@ -39,7 +39,7 @@ function App() {
       // First, get an answer to the user's question using chat completion
       console.log("Calling OpenAI Chat API to get an answer...");
       const chatResponse = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: "You are a helpful assistant providing concise and informative answers." },
           { role: "user", content: prompt }
