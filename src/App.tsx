@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Play, Loader2 } from 'lucide-react';
+import OpenAI from 'openai';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -7,39 +8,103 @@ function App() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [showModal, setShowModal] = useState(true);
+  const [apiKeyStatus, setApiKeyStatus] = useState<string>('Not checked');
+
+  // Check if API key is available
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+      setApiKeyStatus('Missing API key');
+      console.error('OpenAI API key is missing');
+    } else {
+      const maskedKey = apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5);
+      setApiKeyStatus(`Available (${maskedKey})`);
+      console.log('OpenAI API key is available:', maskedKey);
+    }
+  }, []);
 
   const generateResponse = async () => {
     if (!prompt.trim()) return;
     
     setIsLoading(true);
+    console.log("Starting to generate response for prompt:", prompt);
     try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt }),
+      // Create OpenAI client directly in the frontend
+      const openai = new OpenAI({
+        apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+        dangerouslyAllowBrowser: true // Required for client-side usage
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate response');
-      }
-
-      const audioBlob = await response.blob();
+      console.log("Calling OpenAI API...");
+      // Call the OpenAI API directly
+      const response = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: "alloy",
+        input: prompt,
+      });
+      
+      console.log("OpenAI API response received:", response);
+      
+      // Convert the response to a blob and create a URL
+      const buffer = await response.arrayBuffer();
+      console.log("Response converted to array buffer, size:", buffer.byteLength);
+      
+      const audioBlob = new Blob([buffer], { type: 'audio/mpeg' });
+      console.log("Audio blob created, size:", audioBlob.size);
+      
       const url = URL.createObjectURL(audioBlob);
+      console.log("Audio URL created:", url);
+      
       setAudioUrl(url);
+      console.log("Audio URL set in state");
+      
+      // Close the modal to show the audio player
+      setShowModal(false);
+      console.log("Modal closed to show audio player");
+      
+      // Make sure the audio element is properly set up before playing
       if (audioRef.current) {
-        audioRef.current.play();
+        console.log("Audio element found, attempting to play");
+        
+        // Add event listeners to track audio playback
+        audioRef.current.onplay = () => console.log("Audio started playing");
+        audioRef.current.onended = () => console.log("Audio finished playing");
+        audioRef.current.onerror = (e) => console.error("Audio playback error:", e);
+        
+        // Try to play the audio
+        try {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => console.log("Audio playback started successfully"))
+              .catch(error => console.error("Audio playback failed:", error));
+          }
+        } catch (playError) {
+          console.error("Error during play() call:", playError);
+        }
+      } else {
+        console.error("Audio element reference is null");
       }
     } catch (error) {
       console.error('Error generating response:', error);
     } finally {
       setIsLoading(false);
+      console.log("Generation process completed");
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Fallback audio element for debugging */}
+      {audioUrl && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-900 p-4">
+          <p className="mb-2 text-sm text-gray-300">Debug Audio Player:</p>
+          <audio src={audioUrl} controls className="w-full" />
+          <p className="mt-2 text-xs text-gray-400">Audio URL: {audioUrl}</p>
+          <p className="text-xs text-gray-400">API Key Status: {apiKeyStatus}</p>
+        </div>
+      )}
+      
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-90 p-4">
           <div className="relative w-full max-w-md rounded-lg bg-[#111] p-6">
@@ -112,7 +177,16 @@ function App() {
             >
               Generate
             </button>
-            <audio ref={audioRef} src={audioUrl} className="hidden" />
+            <audio ref={audioRef} src={audioUrl} controls className="mt-4 w-full" />
+            
+            {/* Debug information */}
+            <div className="mt-4 rounded bg-gray-800 p-3 text-xs text-gray-300">
+              <p>Debug Info:</p>
+              <p>API Key Status: {apiKeyStatus}</p>
+              <p>Audio URL: {audioUrl || 'None'}</p>
+              <p>Audio Element Status: {audioRef.current ? 'Available' : 'Not Available'}</p>
+              <p>Modal State: {showModal ? 'Showing' : 'Hidden'}</p>
+            </div>
           </div>
         </div>
       )}
