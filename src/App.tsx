@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Play, Loader2 } from 'lucide-react';
+import { X, Play, Loader2, Volume2, Settings } from 'lucide-react';
 import OpenAI from 'openai';
+
+// Define types for our new features
+type VoiceOption = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'ash';
+type ResponseLength = 'short' | 'medium' | 'detailed';
+type PlaybackSpeed = 0.8 | 1.0 | 1.2 | 1.5;
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -10,6 +15,12 @@ function App() {
   const [showModal, setShowModal] = useState(true);
   const [apiKeyStatus, setApiKeyStatus] = useState<string>('Not checked');
   const [answer, setAnswer] = useState<string>('');
+  
+  // New state variables for our features
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption>('ash');
+  const [responseLength, setResponseLength] = useState<ResponseLength>('medium');
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1.0);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Check if API key is available
   useEffect(() => {
@@ -23,6 +34,23 @@ function App() {
       // console.log('OpenAI API key is available:', maskedKey);
     }
   }, []);
+
+  // Effect to apply playback speed when it changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed, audioUrl]);
+
+  // Get max tokens based on response length
+  const getMaxTokens = (length: ResponseLength): number => {
+    switch (length) {
+      case 'short': return 150;
+      case 'medium': return 300;
+      case 'detailed': return 500;
+      default: return 300;
+    }
+  };
 
   const generateResponse = async () => {
     if (!prompt.trim()) return;
@@ -38,13 +66,23 @@ function App() {
 
       // First, get an answer to the user's question using chat completion
       console.log("Calling OpenAI Chat API to get an answer...");
+      console.log(`Using response length: ${responseLength} (${getMaxTokens(responseLength)} tokens)`);
+      
+      // Adjust system prompt based on response length
+      let systemPrompt = "You are a helpful assistant providing informative answers about TV shows.";
+      if (responseLength === 'short') {
+        systemPrompt += " Keep your answers brief and to the point, around 2-3 sentences.";
+      } else if (responseLength === 'detailed') {
+        systemPrompt += " Provide detailed and comprehensive answers with examples and context.";
+      }
+      
       const chatResponse = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "You are a helpful assistant providing concise and informative answers about TV shows." },
+          { role: "system", content: systemPrompt },
           { role: "user", content: prompt }
         ],
-        max_tokens: 300,
+        max_tokens: getMaxTokens(responseLength),
       });
       
       // Extract the answer from the chat completion response
@@ -53,10 +91,10 @@ function App() {
       setAnswer(aiAnswer);
 
       // Now convert the answer to speech
-      console.log("Calling OpenAI TTS API to convert answer to speech...");
+      console.log(`Calling OpenAI TTS API with voice: ${selectedVoice}`);
       const response = await openai.audio.speech.create({
         model: "tts-1",
-        voice: "ash",
+        voice: selectedVoice,
         input: aiAnswer,
       });
       
@@ -82,6 +120,9 @@ function App() {
       // Make sure the audio element is properly set up before playing
       if (audioRef.current) {
         console.log("Audio element found, attempting to play");
+        
+        // Set the playback speed
+        audioRef.current.playbackRate = playbackSpeed;
         
         // Add event listeners to track audio playback
         audioRef.current.onplay = () => console.log("Audio started playing");
@@ -110,6 +151,72 @@ function App() {
     }
   };
 
+  // Component for voice selection
+  const VoiceSelector = () => (
+    <div className="mb-4">
+      <label className="block mb-2 text-sm font-medium">Voice</label>
+      <div className="grid grid-cols-3 gap-2">
+        {(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash'] as VoiceOption[]).map((voice) => (
+          <button
+            key={voice}
+            onClick={() => setSelectedVoice(voice)}
+            className={`py-2 px-3 rounded-md text-sm capitalize ${
+              selectedVoice === voice 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-[#333] text-gray-300 hover:bg-[#444]'
+            }`}
+          >
+            {voice}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Component for response length selection
+  const ResponseLengthSelector = () => (
+    <div className="mb-4">
+      <label className="block mb-2 text-sm font-medium">Response Length</label>
+      <div className="grid grid-cols-3 gap-2">
+        {(['short', 'medium', 'detailed'] as ResponseLength[]).map((length) => (
+          <button
+            key={length}
+            onClick={() => setResponseLength(length)}
+            className={`py-2 px-3 rounded-md text-sm capitalize ${
+              responseLength === length 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-[#333] text-gray-300 hover:bg-[#444]'
+            }`}
+          >
+            {length}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Component for playback speed selection
+  const PlaybackSpeedSelector = () => (
+    <div className="mb-4">
+      <label className="block mb-2 text-sm font-medium">Playback Speed</label>
+      <div className="grid grid-cols-4 gap-2">
+        {([0.8, 1.0, 1.2, 1.5] as PlaybackSpeed[]).map((speed) => (
+          <button
+            key={speed}
+            onClick={() => setPlaybackSpeed(speed)}
+            className={`py-2 px-3 rounded-md text-sm ${
+              playbackSpeed === speed 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-[#333] text-gray-300 hover:bg-[#444]'
+            }`}
+          >
+            {speed}x
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Fallback audio element for debugging */}
@@ -131,9 +238,28 @@ function App() {
             >
               <X size={24} />
             </button>
-            <h2 className="mb-8 text-3xl font-bold">
-              What would you like to learn more about?
-            </h2>
+            
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-3xl font-bold">
+                What would you like to learn more about?
+              </h2>
+              <button 
+                onClick={() => setShowSettings(!showSettings)}
+                className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-[#222]"
+                title="Settings"
+              >
+                <Settings size={20} />
+              </button>
+            </div>
+            
+            {showSettings && (
+              <div className="mb-6 p-4 bg-[#222] rounded-lg">
+                <h3 className="text-lg font-semibold mb-3">Settings</h3>
+                <VoiceSelector />
+                <ResponseLengthSelector />
+              </div>
+            )}
+            
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -168,16 +294,29 @@ function App() {
             >
               <X size={24} />
             </button>
-            <h2 className="mb-8 text-3xl font-bold">Follow-up Response</h2>
-            <div className="mb-4 flex items-center space-x-4">
+            <h2 className="mb-6 text-3xl font-bold">AI Response</h2>
+            
+            <div className="mb-6 flex items-center space-x-4">
               <button
                 onClick={() => audioRef.current?.play()}
                 className="rounded-full bg-white p-3 text-black hover:bg-gray-200"
+                title="Play"
               >
                 <Play size={24} />
               </button>
-              <div className="h-1 flex-1 rounded-full bg-gray-600">
-                <div className="h-full w-0 rounded-full bg-white transition-all duration-200"></div>
+              <div className="flex-1">
+                <div className="h-1 w-full rounded-full bg-gray-600 mb-2">
+                  <div className="h-full w-0 rounded-full bg-white transition-all duration-200"></div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <Volume2 size={16} className="text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-400">Voice: {selectedVoice}</span>
+                  </div>
+                  <div>
+                    <PlaybackSpeedSelector />
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -201,15 +340,6 @@ function App() {
             </button>
             
             <audio ref={audioRef} src={audioUrl} controls className="mt-4 w-full" />
-            
-            {/* Debug information */}
-            {/* <div className="mt-4 rounded bg-gray-800 p-3 text-xs text-gray-300">
-              <p>Debug Info:</p>
-              <p>API Key Status: {apiKeyStatus}</p>
-              <p>Audio URL: {audioUrl || 'None'}</p>
-              <p>Audio Element Status: {audioRef.current ? 'Available' : 'Not Available'}</p>
-              <p>Modal State: {showModal ? 'Showing' : 'Hidden'}</p>
-            </div> */}
           </div>
         </div>
       )}
