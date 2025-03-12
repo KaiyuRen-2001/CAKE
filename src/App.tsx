@@ -41,7 +41,7 @@ function App() {
       const chatResponse = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "You are a helpful assistant providing concise and informative answers." },
+          { role: "system", content: "You are a helpful assistant providing concise and informative answers about TV shows." },
           { role: "user", content: prompt }
         ],
         max_tokens: 300,
@@ -56,7 +56,7 @@ function App() {
       console.log("Calling OpenAI TTS API to convert answer to speech...");
       const response = await openai.audio.speech.create({
         model: "tts-1",
-        voice: "alloy",
+        voice: "ash",
         input: aiAnswer,
       });
       
