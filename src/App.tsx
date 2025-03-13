@@ -22,6 +22,10 @@ function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1.0);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Add a button to start and stop recording
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
   // Check if API key is available
   useEffect(() => {
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -148,6 +152,61 @@ function App() {
     } finally {
       setIsLoading(false);
       console.log("Generation process completed");
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('MediaDevices API or getUserMedia not supported');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0) {
+          const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+          const formData = new FormData();
+          formData.append('file', audioBlob, 'audio.webm');
+          formData.append('model', 'whisper-1');
+
+          // Call OpenAI Whisper API
+          const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+            },
+            body: formData
+          });
+
+          // Log the response status and text for debugging
+          console.log('Response status:', response.status);
+          const responseText = await response.text();
+          console.log('Response text:', responseText);
+
+          const result = JSON.parse(responseText);
+          if (result.text) {
+            setPrompt(result.text);
+          } else {
+            console.error('Transcription failed:', result);
+          }
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -280,6 +339,13 @@ function App() {
               ) : (
                 'Generate'
               )}
+            </button>
+            {/* Add buttons for recording inside the modal */}
+            <button
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+              className="w-full mt-4 rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
+            >
+              {isRecording ? 'Stop Recording' : 'Start Recording'}
             </button>
           </div>
         </div>
