@@ -7,6 +7,17 @@ type VoiceOption = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'a
 type ResponseLength = 'short' | 'medium' | 'detailed';
 type PlaybackSpeed = 0.8 | 1.0 | 1.2 | 1.5;
 
+// Update VoiceOption to include gender
+const voiceOptions: { name: VoiceOption; gender: string }[] = [
+  { name: 'alloy', gender: 'male' },
+  { name: 'echo', gender: 'female' },
+  { name: 'fable', gender: 'female' },
+  { name: 'onyx', gender: 'male' },
+  { name: 'nova', gender: 'female' },
+  { name: 'shimmer', gender: 'female' },
+  { name: 'ash', gender: 'male' }
+];
+
 function App() {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -215,17 +226,17 @@ function App() {
     <div className="mb-4">
       <label className="block mb-2 text-sm font-medium">Voice</label>
       <div className="grid grid-cols-3 gap-2">
-        {(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash'] as VoiceOption[]).map((voice) => (
+        {voiceOptions.map(({ name, gender }) => (
           <button
-            key={voice}
-            onClick={() => setSelectedVoice(voice)}
+            key={name}
+            onClick={() => setSelectedVoice(name)}
             className={`py-2 px-3 rounded-md text-sm capitalize ${
-              selectedVoice === voice 
+              selectedVoice === name 
                 ? 'bg-blue-600 text-white' 
                 : 'bg-[#333] text-gray-300 hover:bg-[#444]'
             }`}
           >
-            {voice}
+            {`${name} (${gender})`}
           </button>
         ))}
       </div>
@@ -345,7 +356,7 @@ function App() {
               onClick={isRecording ? handleStopRecording : handleStartRecording}
               className="w-full mt-4 rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
-              {isRecording ? 'Stop Recording' : 'Start Recording'}
+              {isRecording ? 'Stop Recording' : 'Ask a question'}
             </button>
           </div>
         </div>
