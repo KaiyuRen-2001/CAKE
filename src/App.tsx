@@ -37,6 +37,10 @@ function App() {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
+  // Load audio cues
+  const askQuestionSound = new Audio('/sounds/ask-question.mp3');
+  const stopRecordingSound = new Audio('/sounds/ask-question.mp3');
+
   // Check if API key is available
   useEffect(() => {
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -209,6 +213,7 @@ function App() {
 
       mediaRecorder.start();
       setIsRecording(true);
+      askQuestionSound.play(); // Play sound when starting recording
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
@@ -218,6 +223,7 @@ function App() {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      stopRecordingSound.play(); // Play sound when stopping recording
     }
   };
 
