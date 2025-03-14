@@ -1,7 +1,4 @@
-# CAKE - Content Augmentation and Knowledge Enhancement
-
-## Overview
-CAKE is an interactive application that enhances the viewing experience by allowing users to ask questions about the content they've just watched. Using advanced AI technology, CAKE provides informative responses to user queries, making it easier to understand complex plots, character relationships, and other aspects of the content.
+# Rewind
 
 ## Features
 
@@ -39,13 +36,7 @@ This application uses:
 - OpenAI's GPT-4o for generating informative responses
 - OpenAI's TTS (Text-to-Speech) API for converting text responses to speech
 - React and TypeScript for the frontend interface
-- Markdown rendering for formatted text responses
-
-## Development Background
-
-This project was developed as part of the "Wizard of Oz" functionality for user testing. Initially, during user interviews, we utilized ChatGPT to answer follow-up questions manually. Now, the process is automated through this interface, allowing for a seamless experience where users can ask questions and receive informative responses about the content they've just watched.
-
-Recent improvements include audio cues for better interaction feedback and enhanced UI formatting for clearer, more readable responses.
+- Markdown rendering for formatted text response
 
 ## Getting Started
 
