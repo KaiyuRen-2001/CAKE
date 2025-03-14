@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Play, Loader2, Volume2, Settings } from 'lucide-react';
 import OpenAI from 'openai';
+import ReactMarkdown from 'react-markdown';
 
 // Define types for our new features
 type VoiceOption = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'ash';
@@ -17,6 +18,34 @@ const voiceOptions: { name: VoiceOption; gender: string }[] = [
   { name: 'shimmer', gender: 'female' },
   { name: 'ash', gender: 'male' }
 ];
+
+// Add CSS styles for Markdown headings
+const markdownStyles = `
+  h1 {
+    font-size: 2em;
+    font-weight: bold;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+  }
+  h2 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-top: 0.75em;
+    margin-bottom: 0.5em;
+  }
+  h3 {
+    font-size: 1.25em;
+    font-weight: bold;
+    margin-top: 0.5em;
+    margin-bottom: 0.25em;
+  }
+`;
+
+// Inject styles into the document
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = markdownStyles;
+document.head.appendChild(styleSheet);
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -64,11 +93,16 @@ function App() {
   // Get max tokens based on response length
   const getMaxTokens = (length: ResponseLength): number => {
     switch (length) {
-      case 'short': return 150;
+      case 'short': return 100;
       case 'medium': return 300;
       case 'detailed': return 500;
       default: return 300;
     }
+  };
+
+  const formatResponse = (response: string): string => {
+    // Replace dialogue markers with Markdown bold
+    return response.replace(/\*\*(\w+)\*\*:/g, '**$1**:');
   };
 
   const generateResponse = async () => {
@@ -107,7 +141,7 @@ function App() {
       // Extract the answer from the chat completion response
       const aiAnswer = chatResponse.choices[0]?.message?.content || "I'm sorry, I couldn't generate an answer.";
       console.log("Received answer from OpenAI:", aiAnswer);
-      setAnswer(aiAnswer);
+      setAnswer(formatResponse(aiAnswer));
 
       // Now convert the answer to speech
       console.log(`Calling OpenAI TTS API with voice: ${selectedVoice}`);
@@ -405,7 +439,7 @@ function App() {
             
             {/* Display the AI's answer text */}
             <div className="mb-4 max-h-60 overflow-y-auto rounded-lg bg-[#222] p-4 text-white">
-              {answer}
+              <ReactMarkdown>{answer}</ReactMarkdown>
             </div>
             
             <div className="mb-4">
